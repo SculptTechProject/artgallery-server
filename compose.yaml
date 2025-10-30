@@ -7,6 +7,7 @@
     container_name: artgallery-server
     ports: ["8080:8080"]
     environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://0.0.0.0:8080"
       ConnectionStrings__Default: "Data Source=/data/app.db;Cache=Shared;Pooling=True"
     volumes:

@@ -1,3 +1,4 @@
+using artgallery_server.DTO.Art;
 using artgallery_server.DTO.Artist;
 using artgallery_server.Infrastructure;
 using artgallery_server.Models;
@@ -48,6 +49,116 @@ namespace artgallery_server.Controllers
                 .Select(a => new ArtistDto(a.Id, a.Name, a.Surname, a.Biography))
                 .ToListAsync();
             return list;
+        }
+        
+        // Get artist by Id endpoint
+        // GET api/v1/artist/{id}
+        [HttpGet("{id:guid}")]
+        public async Task<ActionResult<ArtistDto>> GetById(Guid id, [FromQuery] bool expandArts = false)
+        {
+            if (!expandArts)
+            {
+                var artist = await _db.Artists.AsNoTracking()
+                    .Where(a => a.Id == id)
+                    .Select(a => new ArtistDto(a.Id, a.Name, a.Surname, a.Biography))
+                    .FirstOrDefaultAsync();
+
+                return artist is null ? NotFound() : Ok(artist);
+            }
+
+            var withArts = await _db.Artists.AsNoTracking()
+                .Where(a => a.Id == id)
+                .Select(a => new ArtistWithArtsDto(
+                    a.Id,
+                    a.Name,
+                    a.Surname,
+                    a.Biography,
+                    a.Arts
+                        .OrderBy(x => x.Title)
+                        .Select(x => new ArtMiniDto(x.Id, x.Title, x.Description, x.Type))
+                        .ToList()
+                ))
+                .FirstOrDefaultAsync();
+
+            return withArts is null ? NotFound() : Ok(withArts);
+        }
+        
+        // Get artist by Id endpoint
+        // GET api/v1/artist/{id}/grouped
+        [HttpGet("{id:guid}/grouped")]
+        public async Task<ActionResult<object>> GetByIdGrouped([FromRoute] Guid id)
+        {
+            var data = await _db.Artists.AsNoTracking()
+                .Where(a => a.Id == id)
+                .Select(a => new {
+                    a.Id,
+                    a.Name,
+                    a.Surname,
+                    a.Biography,
+                    Arts = a.Arts
+                        .Select(x => new ArtMiniDto(x.Id, x.Title, x.Description, x.Type))
+                        .ToList()
+                })
+                .FirstOrDefaultAsync();
+
+            if (data is null) return NotFound();
+
+            var grouped = data.Arts
+                .GroupBy(x => x.Type)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<ArtMiniDto>)g.ToList());
+
+            return Ok(new {
+                data.Id,
+                data.Name,
+                data.Surname,
+                data.Biography,
+                ArtsByType = grouped
+            });
+        }
+
+        
+        // Patch artist by Id endpoint
+        // PATCH api/v1/artist/{id}
+        [HttpPatch("{id:guid}")]
+        public async Task<ActionResult<ArtistDto>> PatchArtist([FromRoute] Guid id, [FromBody] PatchArtistDto dto)
+        {
+            var artist = await _db.Artists.FirstOrDefaultAsync(a => a.Id == id);
+            
+            if (artist is null) return NotFound();
+            
+            if (dto.Name is not null) artist.Name = dto.Name;
+            if (dto.Surname is not null) artist.Surname = dto.Surname;
+            if (dto.Biography is not null) artist.Biography = dto.Biography;
+            
+            await _db.SaveChangesAsync();
+
+            var result = new ArtistDto(artist.Id, artist.Name, artist.Surname, artist.Biography);
+            
+            return Ok(result);
+        }
+        
+        // Delete artist by Id endpoint
+        // DELETE api/v1/artist/{id}
+        [HttpDelete("{id:guid}")]
+        public async Task<ActionResult<ArtistDto>> DeleteArtist([FromRoute] Guid id)
+        {
+            var artist = await _db.Artists.FirstOrDefaultAsync(a => a.Id == id);
+
+            if (artist is null) return NotFound();
+
+            var hasArts = await _db.Arts.AsNoTracking().AnyAsync(x => x.ArtistId == id);
+
+            if (hasArts)
+            {
+                return Conflict("Cannot delete artist with arts.");
+            }
+
+            var stub = new Artist {Id = id};
+            _db.Artists.Attach(stub);
+            _db.Artists.Remove(stub);
+            
+            await _db.SaveChangesAsync();
+            return NoContent();
         }
     }
 }
