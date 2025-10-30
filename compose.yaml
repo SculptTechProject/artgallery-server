@@ -1,0 +1,23 @@
+﻿services:
+  artgallery-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: artgallery-server:dev
+    container_name: artgallery-server
+    ports: ["8080:8080"]
+    environment:
+      ASPNETCORE_URLS: "http://0.0.0.0:8080"
+      ConnectionStrings__Default: "Data Source=/data/app.db;Cache=Shared;Pooling=True"
+    volumes:
+      - app_data:/data
+    user: "0:0"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  app_data: {}
