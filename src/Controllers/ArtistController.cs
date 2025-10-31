@@ -142,7 +142,7 @@ namespace artgallery_server.Controllers
         [HttpDelete("{id:guid}")]
         public async Task<ActionResult<ArtistDto>> DeleteArtist([FromRoute] Guid id)
         {
-            var artist = await _db.Artists.FirstOrDefaultAsync(a => a.Id == id);
+            var artist = await _db.Artists.FindAsync(id);
 
             if (artist is null) return NotFound();
 
@@ -153,10 +153,7 @@ namespace artgallery_server.Controllers
                 return Conflict("Cannot delete artist with arts.");
             }
 
-            var stub = new Artist {Id = id};
-            _db.Artists.Attach(stub);
-            _db.Artists.Remove(stub);
-            
+            _db.Artists.Remove(artist);
             await _db.SaveChangesAsync();
             return NoContent();
         }
