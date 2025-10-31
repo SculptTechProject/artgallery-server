@@ -1,7 +1,7 @@
 ﻿FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 EXPOSE 8080
-EXPOSE 8081
+ENV ASPNETCORE_URLS=http://+:8080
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
@@ -19,4 +19,8 @@ RUN dotnet publish "./artgallery-server.csproj" -c $BUILD_CONFIGURATION -o /app/
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+RUN mkdir -p /app/wwwroot/images/artworks /app/wwwroot/images/artists
+VOLUME ["/app/wwwroot"]
+
 ENTRYPOINT ["dotnet", "artgallery-server.dll"]

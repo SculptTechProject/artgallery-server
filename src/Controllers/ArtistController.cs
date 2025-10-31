@@ -147,11 +147,8 @@ namespace artgallery_server.Controllers
             if (artist is null) return NotFound();
 
             var hasArts = await _db.Arts.AsNoTracking().AnyAsync(x => x.ArtistId == id);
-
-            if (hasArts)
-            {
-                return Conflict("Cannot delete artist with arts.");
-            }
+            
+            if (hasArts) return Conflict("Cannot delete artist with arts.");
 
             _db.Artists.Remove(artist);
             await _db.SaveChangesAsync();

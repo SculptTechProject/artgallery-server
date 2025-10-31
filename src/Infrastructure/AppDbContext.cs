@@ -20,6 +20,7 @@ namespace artgallery_server.Infrastructure
                 e.Property(a => a.Id).ValueGeneratedOnAdd();
                 e.Property(a => a.Title).IsRequired().HasMaxLength(64);
                 e.Property(a => a.Description).HasMaxLength(1000);
+                e.Property(a => a.ImageUrl).IsRequired().HasMaxLength(256);
                 e.Property(a => a.ArtistId).IsRequired();
                 
                 e.Property(a => a.Type).IsRequired()

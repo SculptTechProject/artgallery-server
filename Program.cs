@@ -1,4 +1,5 @@
 using artgallery_server.Infrastructure;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
 using System.Text.Json.Serialization;
@@ -87,6 +88,20 @@ public class Program
                 c.RoutePrefix = "docs"; // UI pod /docs
             });
         }
+        
+        // Serwowanie statycznych plików z wwwroot
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            OnPrepareResponse = ctx =>
+            {
+                // prosty cache (7 dni); zmień wg potrzeb
+                ctx.Context.Response.Headers["Cache-Control"] = "public,max-age=604800";
+            },
+            ContentTypeProvider = new FileExtensionContentTypeProvider
+            {
+                Mappings = { [".webp"] = "image/webp", [".avif"] = "image/avif" }
+            }
+        });
 
         // W kontenerze zwykle NIE wymuszaj https (chyba że masz cert)
         // app.UseHttpsRedirection();

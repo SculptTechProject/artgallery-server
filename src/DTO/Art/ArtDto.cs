@@ -7,6 +7,7 @@ namespace artgallery_server.DTO.Art
         Guid Id,
         string Title,
         string Description,
+        string? ImageUrl,
         ArtistDto Artist,
         ArtType Type
     );

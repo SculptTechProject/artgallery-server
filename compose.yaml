@@ -12,6 +12,7 @@
       ConnectionStrings__Default: "Data Source=/data/app.db;Cache=Shared;Pooling=True"
     volumes:
       - app_data:/data
+      - ./wwwroot:/app/wwwroot:rw
     user: "0:0"
     restart: unless-stopped
     healthcheck:
@@ -22,3 +23,4 @@
 
 volumes:
   app_data: {}
+  art_wwwroot:

@@ -5,6 +5,7 @@ namespace artgallery_server.DTO.Art
     public sealed record PatchArtDto(
         string? Title,
         string? Description,
+        string? ImageUrl,
         ArtType? Type
         );
 

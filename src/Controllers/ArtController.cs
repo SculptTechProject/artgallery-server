@@ -41,6 +41,7 @@ namespace artgallery_server.Controllers
                 Title = dto.Title.Trim(),
                 Description = dto.Description.Trim(),
                 ArtistId = dto.ArtistId,
+                ImageUrl = dto.ImageUrl,
                 Type = dto.Type,
                 Artist = null!
             };
@@ -52,6 +53,7 @@ namespace artgallery_server.Controllers
                 entity.Id,
                 entity.Title,
                 entity.Description,
+                entity.ImageUrl,
                 artistDto,
                 entity.Type
             );
@@ -72,6 +74,7 @@ namespace artgallery_server.Controllers
                     a.Id,
                     a.Title,
                     a.Description,
+                    a.ImageUrl,
                     new ArtistDto(a.Artist.Id, a.Artist.Name, a.Artist.Surname, a.Artist.Biography),
                     a.Type))
                 .FirstOrDefaultAsync();
@@ -109,7 +112,10 @@ namespace artgallery_server.Controllers
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(a => new ArtDto(
-                    a.Id, a.Title, a.Description,
+                    a.Id,
+                    a.Title,
+                    a.Description,
+                    a.ImageUrl,
                     new ArtistDto(a.Artist.Id, a.Artist.Name, a.Artist.Surname, a.Artist.Biography),
                     a.Type))
                 .ToListAsync();
@@ -134,7 +140,10 @@ namespace artgallery_server.Controllers
                 .OrderBy(a => EF.Functions.Random())
                 .Take(limit)
                 .Select(a => new ArtDto(
-                    a.Id, a.Title, a.Description,
+                    a.Id,
+                    a.Title,
+                    a.Description,
+                    a.ImageUrl,
                     new ArtistDto(a.Artist.Id, a.Artist.Name, a.Artist.Surname, a.Artist.Biography),
                     a.Type))
                 .ToListAsync();
@@ -150,7 +159,10 @@ namespace artgallery_server.Controllers
                 .Where(a => a.Type == type)
                 .OrderBy(a => a.Title)
                 .Select(a => new ArtDto(
-                    a.Id, a.Title, a.Description,
+                    a.Id,
+                    a.Title,
+                    a.Description,
+                    a.ImageUrl,
                     new ArtistDto(a.Artist.Id, a.Artist.Name, a.Artist.Surname, a.Artist.Biography),
                     a.Type))
                 .ToListAsync();
