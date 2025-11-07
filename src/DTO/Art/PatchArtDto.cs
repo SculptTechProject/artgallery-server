@@ -8,5 +8,4 @@ namespace artgallery_server.DTO.Art
         string? ImageUrl,
         ArtType? Type
         );
-
 }
