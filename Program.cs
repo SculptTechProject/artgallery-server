@@ -23,6 +23,18 @@ public class Program
         builder.Services.AddControllers()
             .AddJsonOptions(o =>
                 o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+        
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("DevCors", policy =>
+                    policy.WithOrigins(
+                            "http://localhost:3000",
+                            "http://127.0.0.1:3000")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials()
+            );
+        });
 
         // HealthChecks /healthz
         builder.Services.AddHealthChecks()
@@ -152,6 +164,10 @@ public class Program
         {
             logger.LogError(ex, "AdminSeeder: błąd inicjalizacji admina.");
         }
+
+        app.UseRouting();
+        
+        app.UseCors("DevCors");
 
         app.UseAuthentication();
         app.UseAuthorization();

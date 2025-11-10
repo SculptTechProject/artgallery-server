@@ -9,7 +9,7 @@ namespace artgallery_server.Controllers
         private readonly IWebHostEnvironment _env;
         public UploadsController(IWebHostEnvironment env) => _env = env;
 
-        [HttpPost("artwork")]
+        [HttpPost("arts")]
         [RequestSizeLimit(10_000_000)]
         public async Task<ActionResult<string>> UploadArtwork(IFormFile file)
         {
