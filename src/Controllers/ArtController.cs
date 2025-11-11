@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace artgallery_server.Controllers
 {
     [ApiController]
-    [Route("api/v1/[controller]")]
+    [Route("api/v1/arts")]
     public class ArtController : ControllerBase
     {
         // Connection to database
@@ -168,6 +168,37 @@ namespace artgallery_server.Controllers
                 .ToListAsync();
 
             return Ok(items);
+        }
+
+        [HttpGet("categories")]
+        [ProducesResponseType(typeof(IEnumerable<CategoryDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories(
+            [FromQuery] bool includeUnknown = false,
+            [FromQuery] int minCount = 1,
+            CancellationToken ct = default)
+        {
+            IQueryable<Art> q = _db.Arts.AsNoTracking();
+
+            if (!includeUnknown)
+                q = q.Where(a => a.Type != ArtType.Unknown);
+
+            var raw = await q
+                .GroupBy(a => a.Type)
+                .Select(g => new { Key = g.Key, Count = g.Count() })
+                .Where(x => x.Count >= minCount)
+                .ToListAsync(ct);
+
+            var data = raw
+                .Select(x => new CategoryDto(
+                    (int)x.Key,
+                    x.Key.ToDisplayName(),
+                    x.Key.ToSlug(),
+                    x.Count
+                ))
+                .OrderBy(x => x.Name)
+                .ToList();
+
+            return Ok(data);
         }
     }
 }

@@ -2,8 +2,11 @@ using artgallery_server.Infrastructure;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
+using Microsoft.IdentityModel.Tokens;
 using System.Text.Json.Serialization;
 using Microsoft.OpenApi.Models;
+using System.Security.Claims;
+using artgallery_server.Utils;
 
 namespace artgallery_server;
 
@@ -13,10 +16,25 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        var signingKey = ValidJwtKey.ValidateJwtKey();
+        builder.Services.AddSingleton(signingKey);
+        
         // JSON
         builder.Services.AddControllers()
             .AddJsonOptions(o =>
                 o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+        
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("DevCors", policy =>
+                    policy.WithOrigins(
+                            "http://localhost:3000",
+                            "http://127.0.0.1:3000")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials()
+            );
+        });
 
         // HealthChecks /healthz
         builder.Services.AddHealthChecks()
@@ -25,6 +43,33 @@ public class Program
         // DB
         builder.Services.AddDbContext<AppDbContext>(opt =>
             opt.UseSqlite(builder.Configuration.GetConnectionString("Default")));
+
+        // Admin policy (Auth)
+        builder.Services.AddAuthentication("Bearer")
+            .AddJwtBearer("Bearer", opt =>
+            {
+                opt.RequireHttpsMetadata = false;
+                opt.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidIssuer = "ArtGalleryBackend",
+                    ValidAudience = "artgallery_api",
+                    IssuerSigningKey = signingKey,
+
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+
+                    RoleClaimType = ClaimTypes.Role
+                };
+                opt.RequireHttpsMetadata = false;
+            });
+        
+        builder.Services.AddAuthorization(o =>
+        {
+            o.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
+        });
+
 
         // OpenAPI (dev)
         builder.Services.AddOpenApi();
@@ -41,25 +86,31 @@ public class Program
                 Description = "Galeria Sztuki – OpenAPI docs"
             });
 
-            var xml = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
-            var xmlPath = Path.Combine(AppContext.BaseDirectory, xml);
-            if (File.Exists(xmlPath))
-                c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
-            
+            c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                Name = "Authorization",
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                In = ParameterLocation.Header,
+                Description = "Wpisz: Bearer {token}"
+            });
+
             c.AddSecurityRequirement(new OpenApiSecurityRequirement
             {
-                {
-                    new OpenApiSecurityScheme {
-                        Reference = new OpenApiReference {
-                            Type = ReferenceType.SecurityScheme, Id = "Bearer"
-                        }
-                    },
-                    Array.Empty<string>()
-                }
+                { new OpenApiSecurityScheme
+                        { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } },
+                    Array.Empty<string>() }
             });
+
+            var xml = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xml);
+            if (File.Exists(xmlPath)) c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
         });
 
         var app = builder.Build();
+        
+        app.Services.GetRequiredService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>();
 
         // make sure the directory exists /db
         var cs = builder.Configuration.GetConnectionString("Default")!;
@@ -92,11 +143,7 @@ public class Program
         // Serwowanie statycznych plików z wwwroot
         app.UseStaticFiles(new StaticFileOptions
         {
-            OnPrepareResponse = ctx =>
-            {
-                // prosty cache (7 dni); zmień wg potrzeb
-                ctx.Context.Response.Headers["Cache-Control"] = "public,max-age=604800";
-            },
+            OnPrepareResponse = ctx => ctx.Context.Response.Headers["Cache-Control"] = "public,max-age=604800",
             ContentTypeProvider = new FileExtensionContentTypeProvider
             {
                 Mappings = { [".webp"] = "image/webp", [".avif"] = "image/avif" }
@@ -106,12 +153,30 @@ public class Program
         // W kontenerze zwykle NIE wymuszaj https (chyba że masz cert)
         // app.UseHttpsRedirection();
 
+        var logger = app.Logger;
+        
+        try
+        {
+            AdminSeeder.SeedAsync(app.Services).GetAwaiter().GetResult();
+            logger.LogInformation("AdminSeeder: zakończono pomyślnie.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "AdminSeeder: błąd inicjalizacji admina.");
+        }
+
+        app.UseRouting();
+        
+        app.UseCors("DevCors");
+
+        app.UseAuthentication();
         app.UseAuthorization();
 
         // Healthz
         app.MapHealthChecks("/healthz");
 
         app.MapControllers();
+        
         app.Run();
     }
 }

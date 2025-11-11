@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace artgallery_server.Controllers
 {
     [ApiController]
-    [Route("api/v1/[controller]")]
+    [Route("api/v1/artists")]
     public class ArtistController : ControllerBase
     {
         // Connection to database
@@ -40,7 +40,7 @@ namespace artgallery_server.Controllers
         }
         
         // Get artists endpoint
-        // GET api/v1/artist
+        // GET api/v1/artists
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ArtistDto>>> List()
         {
@@ -52,7 +52,7 @@ namespace artgallery_server.Controllers
         }
         
         // Get artist by Id endpoint
-        // GET api/v1/artist/{id}
+        // GET api/v1/artists/{id}
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<ArtistDto>> GetById(Guid id, [FromQuery] bool expandArts = false)
         {
@@ -84,7 +84,7 @@ namespace artgallery_server.Controllers
         }
         
         // Get artist by Id endpoint
-        // GET api/v1/artist/{id}/grouped
+        // GET api/v1/artists/{id}/grouped
         [HttpGet("{id:guid}/grouped")]
         public async Task<ActionResult<object>> GetByIdGrouped([FromRoute] Guid id)
         {
