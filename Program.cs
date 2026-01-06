@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using artgallery_server.Utils;
+using artgallery_server.Services;
 
 namespace artgallery_server;
 
@@ -43,6 +44,8 @@ public class Program
         // DB
         builder.Services.AddDbContext<AppDbContext>(opt =>
             opt.UseSqlite(builder.Configuration.GetConnectionString("Default")));
+
+        builder.Services.AddScoped<DbSeeder>();
 
         // Admin policy (Auth)
         builder.Services.AddAuthentication("Bearer")
@@ -159,6 +162,16 @@ public class Program
         {
             AdminSeeder.SeedAsync(app.Services).GetAwaiter().GetResult();
             logger.LogInformation("AdminSeeder: zakończono pomyślnie.");
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                DbInitializer.Seed(db);
+                
+                var dbSeeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
+                dbSeeder.SeedAsync().GetAwaiter().GetResult();
+                logger.LogInformation("DbSeeder: zakończono pomyślnie.");
+            }
         }
         catch (Exception ex)
         {

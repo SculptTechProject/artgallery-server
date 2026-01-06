@@ -6,6 +6,6 @@ namespace artgallery_server.Models
         public string Name { get; set; } = null!;
         public string Surname { get; set; } = null!;
         public string Biography { get; set; } = null!;
-        public ICollection<Art> Arts { get; set; } = new List<Art>();
+        public virtual ICollection<Art> Arts { get; set; } = new List<Art>();
     }
 }

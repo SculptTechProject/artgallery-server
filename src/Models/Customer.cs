@@ -6,6 +6,6 @@ namespace artgallery_server.Models
     {
         public string ShippingAdress { get; set; }
         public string PhoneNumber { get; set; }
-        public ICollection<Order> Orders { get; set; } = new List<Order>();
+        public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
     }
 }

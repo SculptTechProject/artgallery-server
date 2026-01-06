@@ -22,6 +22,7 @@ namespace artgallery_server.Infrastructure
         public DbSet<ArtTag> ArtTags => Set<ArtTag>();
         public DbSet<Order> Orders => Set<Order>();
         public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+        public DbSet<Ticket> Tickets => Set<Ticket>();
 
         protected override void OnModelCreating(ModelBuilder b)
         {
@@ -82,6 +83,12 @@ namespace artgallery_server.Infrastructure
             b.Entity<OrderItem>(e =>
             {
                 e.Property(oi => oi.UnitPriceSnapshot).HasColumnType("decimal(18,2)");
+            });
+
+            // --- TICKETS ---
+            b.Entity<Ticket>(e =>
+            {
+                e.Property(t => t.Price).HasColumnType("decimal(18,2)");
             });
         }
     }

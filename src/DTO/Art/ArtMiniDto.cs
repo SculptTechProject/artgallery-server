@@ -3,7 +3,7 @@
 namespace artgallery_server.DTO.Art
 {
     public sealed record ArtMiniDto(
-        Guid Id,
+        int Id,
         string Title,
         string Description,
         ArtType Type

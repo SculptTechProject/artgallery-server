@@ -2,7 +2,7 @@
 
 namespace artgallery_server.DTO.Art
 {
-    public sealed record CreateArtDto(
+    public sealed record UpdateArtDto(
         string Title,
         string Description,
         string? ImageUrl,

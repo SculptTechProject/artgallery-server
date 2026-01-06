@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using artgallery_server.Infrastructure;
 
@@ -10,9 +11,11 @@ using artgallery_server.Infrastructure;
 namespace artgallery_server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260106141646_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
@@ -50,9 +53,9 @@ namespace artgallery_server.Migrations
 
             modelBuilder.Entity("artgallery_server.Models.Art", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("ArtistId")
                         .HasColumnType("TEXT");
@@ -159,8 +162,8 @@ namespace artgallery_server.Migrations
                     b.Property<int>("ExhibitionId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("ArtId")
-                        .HasColumnType("INTEGER");
+                    b.Property<Guid>("ArtId")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("WallLocation")
                         .IsRequired()
@@ -202,8 +205,8 @@ namespace artgallery_server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("ArtId")
-                        .HasColumnType("INTEGER");
+                    b.Property<Guid>("ArtId")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("OrderId")
                         .HasColumnType("INTEGER");
@@ -222,8 +225,8 @@ namespace artgallery_server.Migrations
 
             modelBuilder.Entity("artgallery_server.Models.Tag.ArtTag", b =>
                 {
-                    b.Property<int>("ArtId")
-                        .HasColumnType("INTEGER");
+                    b.Property<Guid>("ArtId")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("TagId")
                         .HasColumnType("INTEGER");
@@ -248,33 +251,6 @@ namespace artgallery_server.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Tags");
-                });
-
-            modelBuilder.Entity("artgallery_server.Models.Ticket", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ExhibitionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExhibitionId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Tickets");
                 });
 
             modelBuilder.Entity("artgallery_server.Models.Admin", b =>
@@ -396,25 +372,6 @@ namespace artgallery_server.Migrations
                     b.Navigation("Tag");
                 });
 
-            modelBuilder.Entity("artgallery_server.Models.Ticket", b =>
-                {
-                    b.HasOne("artgallery_server.Models.Exhibitions.Exhibition", "Exhibition")
-                        .WithMany("Tickets")
-                        .HasForeignKey("ExhibitionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("artgallery_server.Models.Abstract.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Exhibition");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("artgallery_server.Models.Admin", b =>
                 {
                     b.HasOne("artgallery_server.Models.Abstract.User", null)
@@ -455,8 +412,6 @@ namespace artgallery_server.Migrations
             modelBuilder.Entity("artgallery_server.Models.Exhibitions.Exhibition", b =>
                 {
                     b.Navigation("ExhibitionArts");
-
-                    b.Navigation("Tickets");
                 });
 
             modelBuilder.Entity("artgallery_server.Models.Order", b =>

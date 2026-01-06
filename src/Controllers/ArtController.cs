@@ -43,6 +43,8 @@ namespace artgallery_server.Controllers
                 ArtistId = dto.ArtistId,
                 ImageUrl = dto.ImageUrl,
                 Type = dto.Type,
+                Price = dto.Price,
+                CategoryId = dto.CategoryId,
                 Artist = null!
             };
 
@@ -55,7 +57,9 @@ namespace artgallery_server.Controllers
                 entity.Description,
                 entity.ImageUrl,
                 artistDto,
-                entity.Type
+                entity.Type,
+                entity.Price,
+                entity.CategoryId
             );
 
             return CreatedAtAction(nameof(GetArtById), new { id = entity.Id }, result);
@@ -63,10 +67,10 @@ namespace artgallery_server.Controllers
 
         // Get art by Id endpoint
         // GET api/v1/art/{id}
-        [HttpGet("{id:guid}")]
+        [HttpGet("{id:int}")]
         [ProducesResponseType(typeof(ArtDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ArtDto>> GetArtById([FromRoute] Guid id)
+        public async Task<ActionResult<ArtDto>> GetArtById([FromRoute] int id)
         {
             var art = await _db.Arts.AsNoTracking()
                 .Where(a => a.Id == id)
@@ -76,7 +80,9 @@ namespace artgallery_server.Controllers
                     a.Description,
                     a.ImageUrl,
                     new ArtistDto(a.Artist.Id, a.Artist.Name, a.Artist.Surname, a.Artist.Biography),
-                    a.Type))
+                    a.Type,
+                    a.Price,
+                    a.CategoryId))
                 .FirstOrDefaultAsync();
 
             return art is null ? NotFound() : Ok(art);
@@ -88,8 +94,12 @@ namespace artgallery_server.Controllers
         public async Task<ActionResult<IEnumerable<ArtDto>>> GetArts(
             [FromQuery] ArtType? type,
             [FromQuery] string? search,
+            [FromQuery] int? categoryId,
+            [FromQuery] decimal? minPrice,
+            [FromQuery] decimal? maxPrice,
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20)
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? sort = null)
         {
             page     = Math.Max(1, page);
             pageSize = Math.Clamp(pageSize, 1, 100);
@@ -99,16 +109,38 @@ namespace artgallery_server.Controllers
             if (type.HasValue)
                 q = q.Where(a => a.Type == type.Value);
 
+            if (categoryId.HasValue)
+                q = q.Where(a => a.CategoryId == categoryId.Value);
+
+            if (minPrice.HasValue)
+                q = q.Where(a => a.Price >= minPrice.Value);
+
+            if (maxPrice.HasValue)
+                q = q.Where(a => a.Price <= maxPrice.Value);
+
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var s = search.Trim();
                 q = q.Where(a => a.Title.Contains(s) || a.Description.Contains(s));
             }
 
+            // Sorting
+            if (sort == "random")
+            {
+                q = q.OrderBy(a => EF.Functions.Random());
+            }
+            else if (sort == "newest")
+            {
+                q = q.OrderByDescending(a => a.Id);
+            }
+            else
+            {
+                q = q.OrderBy(a => a.Title);
+            }
+
             var total = await q.CountAsync();
 
             var items = await q
-                .OrderByDescending(a => a.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(a => new ArtDto(
@@ -117,7 +149,9 @@ namespace artgallery_server.Controllers
                     a.Description,
                     a.ImageUrl,
                     new ArtistDto(a.Artist.Id, a.Artist.Name, a.Artist.Surname, a.Artist.Biography),
-                    a.Type))
+                    a.Type,
+                    a.Price,
+                    a.CategoryId))
                 .ToListAsync();
 
             Response.Headers["X-Total-Count"] = total.ToString();
@@ -145,12 +179,35 @@ namespace artgallery_server.Controllers
                     a.Description,
                     a.ImageUrl,
                     new ArtistDto(a.Artist.Id, a.Artist.Name, a.Artist.Surname, a.Artist.Biography),
-                    a.Type))
+                    a.Type,
+                    a.Price,
+                    a.CategoryId))
                 .ToListAsync();
 
             return Ok(items);
         }
-        
+
+        [HttpGet("random-single")]
+        [ProducesResponseType(typeof(ArtDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ArtDto>> GetRandomSingle()
+        {
+            var art = await _db.Arts.AsNoTracking()
+                .OrderBy(a => EF.Functions.Random())
+                .Select(a => new ArtDto(
+                    a.Id,
+                    a.Title,
+                    a.Description,
+                    a.ImageUrl,
+                    new ArtistDto(a.Artist.Id, a.Artist.Name, a.Artist.Surname, a.Artist.Biography),
+                    a.Type,
+                    a.Price,
+                    a.CategoryId))
+                .FirstOrDefaultAsync();
+
+            return art is null ? NotFound() : Ok(art);
+        }
+
         [HttpGet("type/{type}")]
         [ProducesResponseType(typeof(IEnumerable<ArtDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<ArtDto>>> GetByType([FromRoute] ArtType type)
@@ -164,10 +221,53 @@ namespace artgallery_server.Controllers
                     a.Description,
                     a.ImageUrl,
                     new ArtistDto(a.Artist.Id, a.Artist.Name, a.Artist.Surname, a.Artist.Biography),
-                    a.Type))
+                    a.Type,
+                    a.Price,
+                    a.CategoryId))
                 .ToListAsync();
 
             return Ok(items);
+        }
+
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(typeof(ArtDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ArtDto>> UpdateArt([FromRoute] int id, [FromBody] UpdateArtDto dto)
+        {
+            var art = await _db.Arts.Include(a => a.Artist).FirstOrDefaultAsync(a => a.Id == id);
+            if (art is null) return NotFound();
+
+            var artist = await _db.Artists.FindAsync(dto.ArtistId);
+            if (artist is null) return BadRequest("Artist not found.");
+
+            art.Title = dto.Title.Trim();
+            art.Description = dto.Description.Trim();
+            art.ImageUrl = dto.ImageUrl;
+            art.ArtistId = dto.ArtistId;
+            art.Type = dto.Type;
+            art.Price = dto.Price;
+            art.CategoryId = dto.CategoryId;
+
+            await _db.SaveChangesAsync();
+
+            var artistDto = new ArtistDto(artist.Id, artist.Name, artist.Surname, artist.Biography);
+            var result = new ArtDto(art.Id, art.Title, art.Description, art.ImageUrl, artistDto, art.Type, art.Price, art.CategoryId);
+
+            return Ok(result);
+        }
+
+        [HttpDelete("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteArt([FromRoute] int id)
+        {
+            var art = await _db.Arts.FindAsync(id);
+            if (art is null) return NotFound();
+
+            _db.Arts.Remove(art);
+            await _db.SaveChangesAsync();
+
+            return NoContent();
         }
 
         [HttpGet("categories")]

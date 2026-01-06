@@ -6,9 +6,9 @@ namespace artgallery_server.Models
         public string Name { get; set; } = string.Empty;
         
         public int? ParentCategoryId { get; set; }
-        public Category? ParentCategory { get; set; }
-        public ICollection<Category> SubCategories { get; set; } = new List<Category>();
+        public virtual Category? ParentCategory { get; set; }
+        public virtual ICollection<Category> SubCategories { get; set; } = new List<Category>();
         
-        public ICollection<Art> Arts { get; set; } = new List<Art>();
+        public virtual ICollection<Art> Arts { get; set; } = new List<Art>();
     }
 }
