@@ -115,12 +115,15 @@ public class Program
         
         app.Services.GetRequiredService<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider>();
 
-        // make sure the directory exists /db
+        // make sure the directory exists /db and /wwwroot/uploads
         var cs = builder.Configuration.GetConnectionString("Default")!;
         var ds = new SqliteConnectionStringBuilder(cs).DataSource;
         var full = Path.IsPathRooted(ds) ? ds : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, ds));
         var dir = Path.GetDirectoryName(full);
         if (!string.IsNullOrWhiteSpace(dir)) Directory.CreateDirectory(dir!);
+
+        var uploadsPath = Path.Combine(builder.Environment.WebRootPath ?? "wwwroot", "uploads");
+        if (!Directory.Exists(uploadsPath)) Directory.CreateDirectory(uploadsPath);
 
         // Migrations + PRAGMA
         using (var scope = app.Services.CreateScope())

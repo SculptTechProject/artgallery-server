@@ -9,26 +9,33 @@ namespace artgallery_server.Controllers
         private readonly IWebHostEnvironment _env;
         public UploadsController(IWebHostEnvironment env) => _env = env;
 
-        [HttpPost("arts")]
-        [RequestSizeLimit(10_000_000)]
-        public async Task<ActionResult<string>> UploadArtwork(IFormFile file)
+        [HttpPost]
+        public async Task<IActionResult> Upload(IFormFile file)
         {
-            if (file is null || file.Length == 0) return BadRequest("Empty file.");
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest("File is empty.");
+            }
 
-            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-            var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".avif" };
-            if (!allowed.Contains(ext)) return BadRequest("Unsupported type.");
+            var uploadsFolder = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads");
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
 
-            var name = $"{Guid.NewGuid():N}{ext}";
-            var relPath = $"/images/artworks/{name}";
-            var absPath = Path.Combine(_env.WebRootPath!, "images", "artworks", name);
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var uniqueFileName = Guid.NewGuid().ToString() + extension;
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
-            Directory.CreateDirectory(Path.GetDirectoryName(absPath)!);
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
 
-            await using var stream = System.IO.File.Create(absPath);
-            await file.CopyToAsync(stream);
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            var fileUrl = $"{baseUrl}/uploads/{uniqueFileName}";
 
-            return Ok(relPath);
+            return Ok(new { url = fileUrl });
         }
     }
 
