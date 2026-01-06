@@ -1,4 +1,4 @@
-﻿using artgallery_server.Enum;
+using artgallery_server.Enum;
 using artgallery_server.Models.Abstract;
 using artgallery_server.Models.Exhibitions;
 
@@ -11,6 +11,7 @@ namespace artgallery_server.Models
         public TicketType Type { get; set; }
         public string Email { get; set; } = string.Empty;
         public string PaymentMethod { get; set; } = string.Empty;
+        public DateTime PurchaseDate { get; set; } = DateTime.UtcNow;
         
         public int ExhibitionId { get; set; }
         public virtual Exhibition Exhibition { get; set; } = null!;

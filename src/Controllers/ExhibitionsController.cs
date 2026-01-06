@@ -21,40 +21,46 @@ namespace artgallery_server.Controllers
         }
 
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<ExhibitionDto>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<ExhibitionDto>>> GetAll()
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAll()
         {
             var items = await _db.Exhibitions.AsNoTracking()
-                .Select(e => new ExhibitionDto(
+                .Select(e => new
+                {
                     e.Id,
                     e.Name,
                     e.Description,
                     e.ImageUrl,
-                    e.StartDate,
-                    e.EndDate,
-                    e.Capacity
-                ))
+                    StartDate = e.StartDate,
+                    EndDate = e.EndDate,
+                    e.Capacity,
+                    SoldCount = e.Tickets.Count(),
+                    IsSoldOut = e.Tickets.Count() >= e.Capacity
+                })
                 .ToListAsync();
 
             return Ok(items);
         }
 
         [HttpGet("{id:int}")]
-        [ProducesResponseType(typeof(ExhibitionDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ExhibitionDto>> GetById(int id)
+        public async Task<IActionResult> GetById(int id)
         {
             var exhibition = await _db.Exhibitions.AsNoTracking()
                 .Where(e => e.Id == id)
-                .Select(e => new ExhibitionDto(
+                .Select(e => new
+                {
                     e.Id,
                     e.Name,
                     e.Description,
                     e.ImageUrl,
-                    e.StartDate,
-                    e.EndDate,
-                    e.Capacity
-                ))
+                    StartDate = e.StartDate,
+                    EndDate = e.EndDate,
+                    e.Capacity,
+                    SoldCount = e.Tickets.Count(),
+                    IsSoldOut = e.Tickets.Count() >= e.Capacity
+                })
                 .FirstOrDefaultAsync();
 
             if (exhibition == null)

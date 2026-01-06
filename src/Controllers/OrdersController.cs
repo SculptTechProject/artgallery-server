@@ -1,8 +1,10 @@
 ﻿using artgallery_server.Infrastructure;
 using artgallery_server.Models;
 using artgallery_server.DTO.Order;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace artgallery_server.Controllers
 {
@@ -84,6 +86,61 @@ namespace artgallery_server.Controllers
 
             // g) Zwróć 201 Created z ID zamówienia.
             return Created($"/api/v1/orders/{order.Id}", new { id = order.Id });
+        }
+
+        /// <summary>
+        /// Pobiera zamówienia. Admin widzi wszystkie, zwykły użytkownik tylko swoje.
+        /// </summary>
+        [HttpGet]
+        [ProducesResponseType(typeof(List<Order>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetOrders()
+        {
+            var isAdmin = User.IsInRole("Admin");
+            
+            IQueryable<Order> query = _db.Orders
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Art)
+                .Include(o => o.Customer);
+
+            if (!isAdmin)
+            {
+                // Zwykły użytkownik - tylko jego zamówienia
+                var username = User.Identity?.Name;
+                if (string.IsNullOrEmpty(username))
+                {
+                    return Unauthorized();
+                }
+
+                var customer = await _db.Customers.FirstOrDefaultAsync(c => c.Username == username || c.Email == username);
+                if (customer == null)
+                {
+                    return Ok(new List<Order>()); // Brak zamówień dla tego użytkownika
+                }
+
+                query = query.Where(o => o.CustomerId == customer.Id);
+            }
+
+            var orders = await query
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+
+            return Ok(orders);
+        }
+
+        /// <summary>
+        /// Pobiera wszystkie zamówienia.
+        /// </summary>
+        [HttpGet("all")]
+        [ProducesResponseType(typeof(List<Order>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllOrders()
+        {
+            var orders = await _db.Orders
+                .Include(o => o.OrderItems)
+                .Include(o => o.Customer)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+
+            return Ok(orders);
         }
     }
 }

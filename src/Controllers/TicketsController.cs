@@ -1,9 +1,10 @@
-﻿using artgallery_server.Infrastructure;
+using artgallery_server.Infrastructure;
 using artgallery_server.Models;
 using artgallery_server.Enum;
 using artgallery_server.DTO.Ticket;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace artgallery_server.Controllers
 {
@@ -73,7 +74,8 @@ namespace artgallery_server.Controllers
                 PaymentMethod = dto.PaymentMethod,
                 Type = ticketType,
                 Price = price,
-                UserId = customer.Id
+                UserId = customer.Id,
+                PurchaseDate = DateTime.UtcNow
             };
 
             _db.Tickets.Add(ticket);
@@ -108,6 +110,26 @@ namespace artgallery_server.Controllers
                 sold = exhibition.SoldCount,
                 remaining = exhibition.Capacity - exhibition.SoldCount
             });
+        }
+
+        /// <summary>
+        /// Pobiera wszystkie bilety z pełnymi danymi (Wystawa + Klient).
+        /// </summary>
+        [HttpGet("all")]
+        [ProducesResponseType(typeof(List<Ticket>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllTickets()
+        {
+            var tickets = await _db.Tickets
+                // 1. To dociąga wystawę (w JSON będzie jako pole "exhibition")
+                .Include(t => t.Exhibition) 
+                
+                // 2. TEGO BRAKOWAŁO: To dociąga dane klienta (imię, nazwisko, email)
+                .Include(t => t.User)       
+                
+                .OrderByDescending(t => t.PurchaseDate)
+                .ToListAsync();
+
+            return Ok(tickets);
         }
     }
 }

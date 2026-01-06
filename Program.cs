@@ -23,7 +23,11 @@ public class Program
         // JSON
         builder.Services.AddControllers()
             .AddJsonOptions(o =>
-                o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+            {
+                o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                
+                o.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+            });
         
         builder.Services.AddCors(options =>
         {
