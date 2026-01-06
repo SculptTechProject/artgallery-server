@@ -19,39 +19,95 @@ namespace artgallery_server.Controllers
         }
 
         [HttpPost("buy")]
-        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> BuyTicket([FromBody] BuyTicketDto dto)
         {
-            // Sprawdź czy wystawa istnieje
-            var exhibition = await _db.Exhibitions.FirstOrDefaultAsync(e => e.Id == dto.ExhibitionId);
+            // 1. Sprawdź, czy wystawa istnieje
+            var exhibition = await _db.Exhibitions
+                .Include(e => e.Tickets)
+                .FirstOrDefaultAsync(e => e.Id == dto.ExhibitionId);
+            
             if (exhibition == null)
             {
-                return BadRequest("Exhibition not found.");
+                return NotFound("Exhibition not found.");
             }
 
-            // Sprawdź czy użytkownik istnieje
-            var userExists = await _db.Users.AnyAsync(u => u.Id == dto.UserId);
-            if (!userExists)
+            // 2. Policz aktualnie sprzedane bilety dla tej wystawy
+            int soldCount = exhibition.Tickets.Count;
+
+            // 3. Jeśli Sprzedane >= Capacity -> zwróć 400 Bad Request
+            if (soldCount >= exhibition.Capacity)
             {
-                return BadRequest("User not found.");
+                return BadRequest("Brak wolnych miejsc");
             }
 
-            // Ustal cenę na podstawie typu
-            decimal price = dto.Type == TicketType.Normalny ? 30.00m : 15.00m;
+            // 4. Znajdź lub utwórz klienta na podstawie Email
+            var customer = await _db.Customers.FirstOrDefaultAsync(c => c.Email == dto.Email);
+            if (customer == null)
+            {
+                customer = new Customer
+                {
+                    Email = dto.Email,
+                    Username = dto.Email, // Domyślny username to email
+                    PasswordHash = "GUEST_NO_PASSWORD", // Prowizoryczne
+                    Name = "Guest",
+                    Surname = "Guest",
+                    ShippingAdress = string.Empty,
+                    PhoneNumber = string.Empty
+                };
+                _db.Customers.Add(customer);
+                await _db.SaveChangesAsync(); // Zapisujemy, aby otrzymać ID
+            }
+
+            // 5. Stwórz obiekt Ticket
+            // Mapowanie TicketType: 0 = Normalny, 1 = Ulgowy
+            var ticketType = (TicketType)dto.Type;
+            decimal price = ticketType == TicketType.Normalny ? 30.00m : 15.00m;
 
             var ticket = new Ticket
             {
-                Type = dto.Type,
                 ExhibitionId = dto.ExhibitionId,
-                UserId = dto.UserId,
-                Price = price
+                Email = dto.Email,
+                PaymentMethod = dto.PaymentMethod,
+                Type = ticketType,
+                Price = price,
+                UserId = customer.Id
             };
 
             _db.Tickets.Add(ticket);
             await _db.SaveChangesAsync();
 
-            return Created($"/api/v1/tickets/{ticket.Id}", new { id = ticket.Id, price = ticket.Price });
+            // 6. Zwróć 200 OK z informacją o sukcesie
+            return Ok(new { message = "Zakup zakończony sukcesem", ticketId = ticket.Id, customerId = customer.Id });
+        }
+
+        [HttpGet("/api/v1/exhibitions/{id}/availability")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetAvailability(int id)
+        {
+            var exhibition = await _db.Exhibitions
+                .Select(e => new 
+                {
+                    e.Id,
+                    e.Capacity,
+                    SoldCount = e.Tickets.Count
+                })
+                .FirstOrDefaultAsync(e => e.Id == id);
+
+            if (exhibition == null)
+            {
+                return NotFound("Exhibition not found.");
+            }
+
+            return Ok(new 
+            {
+                capacity = exhibition.Capacity,
+                sold = exhibition.SoldCount,
+                remaining = exhibition.Capacity - exhibition.SoldCount
+            });
         }
     }
 }

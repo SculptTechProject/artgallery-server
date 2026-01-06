@@ -6,6 +6,7 @@ namespace artgallery_server.Models.Exhibitions
         public string Name { get; set; } = string.Empty;
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
+        public int Capacity { get; set; } = 100;
         
         public virtual ICollection<ExhibitionArt> ExhibitionArts { get; set; } = new List<ExhibitionArt>();
         public virtual ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();

@@ -38,17 +38,28 @@ namespace artgallery_server.Controllers
                 return BadRequest("One or more Art IDs are invalid.");
             }
 
-            // Sprawdź czy klient istnieje
-            var customerExists = await _db.Customers.AnyAsync(c => c.Id == dto.CustomerId);
-            if (!customerExists)
+            // LOGIKA KLIENTA
+            var customer = await _db.Customers.FirstOrDefaultAsync(c => c.Email == dto.Email);
+            if (customer == null)
             {
-                return BadRequest($"Customer with ID {dto.CustomerId} does not exist.");
+                customer = new Customer
+                {
+                    Email = dto.Email,
+                    Username = dto.Email,
+                    PasswordHash = "GUEST_NO_PASSWORD",
+                    Name = "Guest",
+                    Surname = "Order",
+                    ShippingAdress = string.Empty,
+                    PhoneNumber = string.Empty
+                };
+                _db.Customers.Add(customer);
+                await _db.SaveChangesAsync();
             }
 
             // c) Utwórz obiekt Order.
             var order = new Order
             {
-                CustomerId = dto.CustomerId,
+                CustomerId = customer.Id,
                 OrderDate = DateTime.UtcNow,
                 TotalAmount = 0 // Zostanie obliczone niżej
             };

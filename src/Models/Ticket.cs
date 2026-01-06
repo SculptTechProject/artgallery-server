@@ -9,11 +9,13 @@ namespace artgallery_server.Models
         public int Id { get; set; }
         public decimal Price { get; set; }
         public TicketType Type { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string PaymentMethod { get; set; } = string.Empty;
         
         public int ExhibitionId { get; set; }
         public virtual Exhibition Exhibition { get; set; } = null!;
         
-        public int UserId { get; set; }
-        public virtual User User { get; set; } = null!;
+        public int? UserId { get; set; }
+        public virtual User? User { get; set; }
     }
 }
