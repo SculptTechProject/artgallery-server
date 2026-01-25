@@ -23,6 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="data\" />
       <Folder Include="wwwroot\images\artists\" />
     </ItemGroup>
 
