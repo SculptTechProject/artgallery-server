@@ -20,6 +20,8 @@
         <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="9.0.10" />
         <PackageReference Include="Scalar.AspNetCore" Version="2.9.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
+        <PackageReference Include="FastReport.OpenSource" Version="2024.2.20" />
+        <PackageReference Include="FastReport.OpenSource.Web" Version="2024.2.20" />
     </ItemGroup>
 
     <ItemGroup>
