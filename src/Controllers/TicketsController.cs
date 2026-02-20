@@ -25,7 +25,6 @@ namespace artgallery_server.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> BuyTicket([FromBody] BuyTicketDto dto)
         {
-            // 1. Sprawdź, czy wystawa istnieje
             var exhibition = await _db.Exhibitions
                 .Include(e => e.Tickets)
                 .FirstOrDefaultAsync(e => e.Id == dto.ExhibitionId);
@@ -35,35 +34,30 @@ namespace artgallery_server.Controllers
                 return NotFound("Exhibition not found.");
             }
 
-            // 2. Policz aktualnie sprzedane bilety dla tej wystawy
             int soldCount = exhibition.Tickets.Count;
 
-            // 3. Jeśli Sprzedane >= Capacity -> zwróć 400 Bad Request
             if (soldCount >= exhibition.Capacity)
             {
                 return BadRequest("Brak wolnych miejsc");
             }
 
-            // 4. Znajdź lub utwórz klienta na podstawie Email
             var customer = await _db.Customers.FirstOrDefaultAsync(c => c.Email == dto.Email);
             if (customer == null)
             {
                 customer = new Customer
                 {
                     Email = dto.Email,
-                    Username = dto.Email, // Domyślny username to email
-                    PasswordHash = "GUEST_NO_PASSWORD", // Prowizoryczne
+                    Username = dto.Email,
+                    PasswordHash = "GUEST_NO_PASSWORD",
                     Name = "Guest",
                     Surname = "Guest",
                     ShippingAdress = string.Empty,
                     PhoneNumber = string.Empty
                 };
                 _db.Customers.Add(customer);
-                await _db.SaveChangesAsync(); // Zapisujemy, aby otrzymać ID
+                await _db.SaveChangesAsync();
             }
 
-            // 5. Stwórz obiekt Ticket
-            // Mapowanie TicketType: 0 = Normalny, 1 = Ulgowy
             var ticketType = (TicketType)dto.Type;
             decimal price = ticketType == TicketType.Normalny ? 30.00m : 15.00m;
 
@@ -81,7 +75,6 @@ namespace artgallery_server.Controllers
             _db.Tickets.Add(ticket);
             await _db.SaveChangesAsync();
 
-            // 6. Zwróć 200 OK z informacją o sukcesie
             return Ok(new { message = "Zakup zakończony sukcesem", ticketId = ticket.Id, customerId = customer.Id });
         }
 
